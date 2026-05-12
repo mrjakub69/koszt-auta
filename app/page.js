@@ -1,8 +1,8 @@
 "use client";
 
+import { supabase } from "@/app/lib/supabase";
 import Link from "next/link";
-import { useState } from "react";
-import { cars } from "@/data/cars";
+import { useEffect, useState } from "react";
 
 export default function HomePage() {
 
@@ -14,8 +14,34 @@ export default function HomePage() {
   const [selectedFuel, setSelectedFuel] =
     useState("all");
 
+  const [selectedSegment, setSelectedSegment] =
+  useState("all");
+
+
   const [sortBy, setSortBy] =
     useState("default");
+
+  const [maxCost, setMaxCost] =
+  useState("all");
+
+  const [cars, setCars] = useState([]);
+
+    useEffect(() => {
+
+  async function loadCars() {
+
+    const { data } =
+      await supabase
+        .from("cars")
+        .select("*");
+
+    setCars(data || []);
+
+  }
+
+  loadCars();
+
+}, []);
 
   let filteredCars = cars.filter((car) => {
 
@@ -33,10 +59,22 @@ export default function HomePage() {
       selectedFuel === "all" ||
       car.fuel === selectedFuel;
 
+    const matchesSegment =
+      selectedSegment === "all" ||
+      car.segment === selectedSegment;
+
+      
+    const matchesCost =
+    maxCost === "all" ||
+    car.totalMonthlyCost <= Number(maxCost);
+
+
     return (
       matchesSearch &&
       matchesBrand &&
-      matchesFuel
+      matchesFuel &&
+      matchesSegment &&
+      matchesCost
     );
 
   });
@@ -73,49 +111,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
-<nav className="border-b border-zinc-800">
 
-  <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
-
-    <div className="flex items-center gap-3">
-
-      <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center font-bold text-black">
-        BR
-      </div>
-
-      <div>
-
-        <p className="font-bold text-xl">
-          BurnRate
-        </p>
-
-        <p className="text-zinc-500 text-sm">
-          Real costs of cars
-        </p>
-
-      </div>
-
-    </div>
-
-    <div className="hidden md:flex items-center gap-8 text-zinc-400">
-
-      <button className="hover:text-white transition">
-        Ranking
-      </button>
-
-      <button className="hover:text-white transition">
-        Najtańsze auta
-      </button>
-
-      <button className="hover:text-white transition">
-        Porównania
-      </button>
-
-    </div>
-
-  </div>
-
-</nav>
       <section className="border-b border-zinc-800">
 
         <div className="max-w-6xl mx-auto px-6 py-24">
@@ -129,7 +125,7 @@ export default function HomePage() {
           Spalanie, awaryjność i miesięczne wydatki.
           </p>
 
-          <div className="grid md:grid-cols-3 gap-4 mb-6">
+          <div className="grid md:grid-cols-5 gap-4 mb-6">
 
             <select
               value={selectedBrand}
@@ -200,6 +196,69 @@ export default function HomePage() {
             </select>
 
             <select
+            value={selectedSegment}
+            onChange={(e) =>
+            setSelectedSegment(e.target.value)
+            }
+            className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-lg"
+
+           >
+
+           <option value="all">
+           Wszystkie segmenty
+           </option>
+
+           <option value="SUV">
+           SUV
+           </option>
+
+           <option value="Sedan">
+           Sedan
+           </option>
+
+            <option value="Hatchback">
+            Hatchback
+            </option>
+
+           <option value="Kombi">
+           Kombi
+           </option>
+
+           <option value="Coupe">
+           Coupe
+           </option>
+
+            </select>
+
+
+            <select
+value={maxCost}
+onChange={(e) =>
+setMaxCost(e.target.value)
+}
+className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 text-lg"
+
+           >
+
+           <option value="all">
+            Dowolny koszt
+            </option>
+
+            <option value="1000">
+            Do 1000 zł
+            </option>
+
+           <option value="1500">
+            Do 1500 zł
+            </option>
+
+            <option value="2000">
+            Do 2000 zł
+            </option>
+
+            </select>
+
+            <select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value)
@@ -240,6 +299,99 @@ export default function HomePage() {
         </div>
 
       </section>
+
+<section className="border-b border-zinc-800">
+
+  <div className="max-w-6xl mx-auto px-6 py-16">
+
+    <div className="flex items-center justify-between mb-10">
+
+      <div>
+
+        <p className="text-orange-500 mb-2">
+          BurnRate Ranking
+        </p>
+
+        <h2 className="text-4xl font-bold">
+          Top auta
+        </h2>
+
+      </div>
+
+    </div>
+
+    <div className="grid md:grid-cols-3 gap-6">
+
+      {[...cars]
+        .sort(
+          (a, b) =>
+            a.totalMonthlyCost -
+            b.totalMonthlyCost
+        )
+        .slice(0, 3)
+        .map((car, index) => (
+
+          <Link
+            key={car.slug}
+            href={`/koszt/${car.slug}`}
+            className="bg-zinc-900 border border-zinc-800 hover:border-orange-500 transition rounded-2xl p-8"
+          >
+
+            <p className="text-orange-500 mb-4">
+
+              #{index + 1} Ranking
+
+            </p>
+
+            <h3 className="text-3xl font-bold mb-3">
+
+              {car.brand} {car.model}
+
+            </h3>
+
+            <div className="space-y-3 text-zinc-400">
+
+              <div className="flex justify-between">
+
+                <span>⛽ Spalanie</span>
+
+                <span>
+                  {car.fuelConsumption} l
+                </span>
+
+              </div>
+
+              <div className="flex justify-between">
+
+                <span>⭐ Awaryjność</span>
+
+                <span>
+                  {car.reliability}/10
+                </span>
+
+              </div>
+
+              <div className="flex justify-between">
+
+                <span>💰 Koszt</span>
+
+                <span>
+                  {car.totalMonthlyCost} zł
+                </span>
+
+              </div>
+
+            </div>
+
+          </Link>
+
+      ))}
+
+    </div>
+
+  </div>
+
+</section>
 
       <section>
 
@@ -309,6 +461,159 @@ export default function HomePage() {
         </div>
 
       </section>
+
+<section className="border-b border-zinc-800">
+
+  <div className="max-w-6xl mx-auto px-6 py-14">
+
+    <h2 className="text-3xl font-bold mb-8">
+      Popularne rankingi
+    </h2>
+
+    <div className="grid md:grid-cols-2 gap-6">
+
+      <Link
+        href="/ranking"
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 hover:border-orange-500 transition"
+      >
+
+        <p className="text-zinc-500 mb-3">
+          Ranking
+        </p>
+
+        <h3 className="text-3xl font-bold mb-4">
+          Najtańsze i najmniej awaryjne auta
+        </h3>
+
+        <p className="text-zinc-400">
+          Sprawdź ranking samochodów według kosztów utrzymania i awaryjności.
+        </p>
+
+      </Link>
+
+      <Link
+        href="/auta-z-malym-spalaniem"
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 hover:border-orange-500 transition"
+      >
+
+        <p className="text-zinc-500 mb-3">
+          Spalanie
+        </p>
+
+        <h3 className="text-3xl font-bold mb-4">
+          Auta z małym spalaniem
+        </h3>
+
+        <p className="text-zinc-400">
+          Ranking aut z najniższym zużyciem paliwa.
+        </p>
+
+      </Link>
+
+    </div>
+
+  </div>
+
+</section>
+
+<footer className="border-t border-zinc-800 mt-24">
+
+  <div className="max-w-6xl mx-auto px-6 py-12">
+
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+
+      <div>
+
+        <div className="flex items-center gap-3 mb-3">
+
+          <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center font-bold text-black">
+            BR
+          </div>
+
+          <div>
+
+            <p className="font-bold text-xl">
+              BurnRate
+            </p>
+
+            <p className="text-zinc-500 text-sm">
+              Real costs of cars
+            </p>
+
+          </div>
+
+        </div>
+
+        <p className="text-zinc-500 max-w-md">
+          Analiza realnych kosztów utrzymania samochodów.
+          Spalanie, awaryjność i miesięczne wydatki.
+        </p>
+
+      </div>
+
+      <div className="flex gap-10 text-zinc-400">
+
+        <div>
+
+          <p className="font-semibold text-white mb-3">
+            Portal
+          </p>
+
+          <div className="space-y-2">
+
+            <Link href="/ranking" className="block hover:text-orange-500 transition">
+  Ranking
+</Link>
+
+<Link href="/porownanie" className="block hover:text-orange-500 transition">
+  Porównania
+</Link>
+
+<Link href="/auta-z-malym-spalaniem" className="block hover:text-orange-500 transition">
+  Auta z małym spalaniem
+</Link>
+
+          </div>
+
+        </div>
+
+        <div>
+
+          <p className="font-semibold text-white mb-3">
+            BurnRate
+          </p>
+
+          <div className="space-y-2">
+
+            <Link href="/blog" className="block hover:text-orange-500 transition">
+  Blog
+</Link>
+
+<Link href="/metodologia" className="block hover:text-orange-500 transition">
+  Metodologia
+</Link>
+
+<Link href="/o-projekcie" className="block hover:text-orange-500 transition">
+  O projekcie
+</Link>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div className="border-t border-zinc-800 mt-10 pt-6 text-zinc-600 text-sm">
+
+      © 2026 BurnRate. All rights reserved.
+
+    </div>
+
+  </div>
+
+</footer>
 
     </main>
   );
